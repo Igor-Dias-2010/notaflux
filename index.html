@@ -1,0 +1,1440 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NotaFlux — Fluxo Aleatório de Notas & Acordes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #e8e2d6;
+      --surface: #f5f0e8;
+      --surface-2: #ebe4d6;
+      --border: rgba(60, 45, 20, 0.14);
+      --border-strong: rgba(60, 45, 20, 0.24);
+      --wood: #8b6914;
+      --wood-light: #b8952a;
+      --wood-dark: #5c4510;
+      --gold: #9a7218;
+      --gold-soft: rgba(154, 114, 24, 0.12);
+      --gold-glow: rgba(154, 114, 24, 0.22);
+      --text: #2c261c;
+      --muted: #7a7060;
+      --danger: #b85c5c;
+      --danger-soft: rgba(184, 92, 92, 0.12);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    *:focus { outline: none !important; }
+    button, a, select {
+      -webkit-tap-highlight-color: transparent;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    input, textarea { -webkit-user-select: text; user-select: text; }
+    input[type="range"] { -webkit-user-select: none; user-select: none; }
+    ::selection { background: rgba(166,124,26,0.25); color: var(--text); }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .bg-layer {
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background:
+        radial-gradient(ellipse 70% 50% at 20% 15%, rgba(184,160,100,0.15), transparent),
+        radial-gradient(ellipse 50% 40% at 85% 80%, rgba(139,105,20,0.08), transparent),
+        #e8e2d6;
+    }
+
+    .bg-particles {
+      position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden;
+    }
+
+    .particle {
+      position: absolute;
+      bottom: -20px;
+      border-radius: 50%;
+      background: var(--gold);
+      opacity: 0;
+      animation-name: drift;
+      animation-timing-function: linear;
+      animation-iteration-count: infinite;
+    }
+
+    @keyframes drift {
+      0%   { transform: translateY(0) translateX(0); opacity: 0; }
+      8%   { opacity: 0.35; }
+      90%  { opacity: 0.15; }
+      100% { transform: translateY(-110vh) translateX(40px); opacity: 0; }
+    }
+
+    .container {
+      position: relative; z-index: 1;
+      max-width: 640px; margin: 0 auto;
+      padding: 1.4rem 1.1rem 2.2rem;
+    }
+
+    header { text-align: center; margin-bottom: 1.35rem; }
+
+    .logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.4rem; font-weight: 600; letter-spacing: 0.06em;
+      color: var(--text);
+    }
+
+    .logo span { color: var(--gold); }
+
+    .tagline {
+      color: var(--muted); font-size: 0.7rem; margin-top: 0.25rem;
+      letter-spacing: 0.14em; text-transform: uppercase;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.15rem 1.15rem;
+      margin-bottom: 0.9rem;
+      box-shadow: 0 2px 16px rgba(60,45,20,0.06);
+      animation: fadeUp 0.4s ease both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .card-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.05rem; font-weight: 600; color: var(--gold);
+      letter-spacing: 0.04em; margin-bottom: 0.85rem;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+
+    .card-title::after {
+      content: ''; flex: 1; height: 1px;
+      background: linear-gradient(90deg, rgba(166,124,26,0.3), transparent);
+    }
+
+    /* Mode toggle — indicator positioned by JS */
+    .mode-bar { margin-bottom: 1rem; }
+
+    .mode-toggle {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      background: var(--surface-2);
+      padding: 5px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+
+    .mode-indicator {
+      position: absolute;
+      top: 5px;
+      height: calc(100% - 10px);
+      border-radius: 9px;
+      background: var(--surface);
+      border: 1px solid rgba(166, 124, 26, 0.4);
+      box-shadow: 0 1px 4px rgba(60, 45, 20, 0.08);
+      transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .mode-btn {
+      position: relative;
+      z-index: 1;
+      padding: 0.55rem 0.2rem;
+      border: none;
+      border-radius: 9px;
+      background: transparent;
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 0.72rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: color 0.2s ease;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .mode-btn.active {
+      color: var(--gold);
+      font-weight: 600;
+    }
+
+    /* Toolbar */
+    .toolbar {
+      display: flex;
+      gap: 0.4rem;
+      justify-content: flex-end;
+      margin-top: 0.85rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .tool-btn {
+      width: 34px; height: 34px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--muted);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s ease;
+      padding: 0;
+    }
+
+    .tool-btn svg {
+      width: 16px; height: 16px;
+      stroke: currentColor; fill: none;
+      stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    .tool-btn:hover:not(:disabled) {
+      border-color: rgba(166,124,26,0.4);
+      color: var(--gold);
+      background: var(--gold-soft);
+    }
+
+    .tool-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .tool-btn.active-danger {
+      background: var(--danger-soft);
+      border-color: rgba(184,92,92,0.45);
+      color: var(--danger);
+    }
+
+    .tool-btn.clear-btn:hover:not(:disabled) {
+      border-color: rgba(184,92,92,0.4);
+      color: var(--danger);
+      background: var(--danger-soft);
+    }
+
+    /* Notes */
+    .notes-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 0.38rem;
+    }
+
+    @media (max-width: 420px) {
+      .notes-grid { grid-template-columns: repeat(4, 1fr); }
+    }
+
+    .note-btn {
+      aspect-ratio: 1;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface-2);
+      color: var(--text);
+      font-family: 'Playfair Display', serif;
+      font-size: 1.05rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .note-btn:hover {
+      border-color: rgba(166,124,26,0.4);
+      background: var(--gold-soft);
+      color: var(--gold);
+    }
+
+    .note-btn.soft {
+      border-color: rgba(166,124,26,0.25);
+      background: rgba(166,124,26,0.07);
+      color: #8a6a18;
+    }
+
+    .note-btn.active {
+      border-color: rgba(166,124,26,0.5);
+      background: var(--gold-soft);
+      color: var(--gold);
+      box-shadow: 0 0 10px var(--gold-glow);
+    }
+
+    body.delete-mode .note-btn.soft,
+    body.delete-mode .note-btn.active {
+      border-color: rgba(184,92,92,0.4);
+      background: rgba(184,92,92,0.1);
+      color: var(--danger);
+    }
+
+    body.delete-mode .note-btn:hover {
+      border-color: rgba(184,92,92,0.6);
+      background: rgba(184,92,92,0.16);
+    }
+
+    .chord-options {
+      display: none;
+      margin-top: 0.9rem;
+      padding-top: 0.85rem;
+      border-top: 1px solid var(--border);
+      animation: fadeIn 0.28s ease;
+    }
+
+    .chord-options.visible { display: block; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    .quality-label {
+      font-size: 0.66rem; color: var(--muted);
+      letter-spacing: 0.07em; text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+
+    .quality-grid {
+      display: flex; flex-wrap: wrap; gap: 0.32rem;
+    }
+
+    .quality-btn {
+      padding: 0.34rem 0.7rem; border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--muted);
+      font-family: inherit; font-size: 0.73rem; font-weight: 500;
+      cursor: pointer; transition: all 0.2s;
+    }
+
+    .quality-btn:hover {
+      border-color: var(--border-strong); color: var(--text);
+    }
+
+    .quality-btn.selected {
+      background: var(--gold-soft);
+      border-color: rgba(166,124,26,0.4);
+      color: var(--gold);
+    }
+
+    .selected-area {
+      margin-top: 0.9rem;
+      min-height: 28px;
+    }
+
+    .selected-chips {
+      display: flex; flex-wrap: wrap; gap: 0.32rem;
+    }
+
+    .chip {
+      display: inline-flex; align-items: center;
+      background: var(--gold-soft);
+      border: 1px solid rgba(166,124,26,0.28);
+      color: var(--gold);
+      padding: 0.25rem 0.7rem;
+      border-radius: 999px;
+      font-family: 'Playfair Display', serif;
+      font-size: 0.98rem;
+      transition: all 0.2s ease;
+      animation: chipIn 0.25s ease both;
+      cursor: default;
+    }
+
+    body.delete-mode .chip {
+      cursor: pointer;
+      border-color: rgba(184,92,92,0.4);
+      background: rgba(184,92,92,0.1);
+      color: var(--danger);
+    }
+
+    body.delete-mode .chip:hover {
+      background: rgba(184,92,92,0.2);
+      border-color: rgba(184,92,92,0.55);
+    }
+
+    @keyframes chipIn {
+      from { opacity: 0; transform: scale(0.88); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    .empty-msg {
+      font-size: 0.78rem; color: var(--muted);
+      animation: fadeIn 0.25s ease;
+    }
+
+    .error-msg {
+      color: var(--danger); font-size: 0.75rem;
+      margin-top: 0.35rem; display: none;
+    }
+    .error-msg.show { display: block; animation: fadeIn 0.22s ease; }
+
+    .producer-field {
+      display: none;
+      margin-top: 0.9rem;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .producer-field.visible { display: block; }
+
+    .producer-field label {
+      font-size: 0.66rem; color: var(--muted);
+      letter-spacing: 0.07em; text-transform: uppercase;
+      display: block; margin-bottom: 0.4rem;
+    }
+
+    .producer-field textarea {
+      width: 100%;
+      min-height: 88px;
+      max-height: 140px;
+      resize: vertical;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: 'Playfair Display', serif;
+      font-size: 1.15rem;
+      letter-spacing: 0.03em;
+      padding: 0.7rem 0.85rem;
+      line-height: 1.45;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .producer-field textarea:focus {
+      border-color: rgba(166,124,26,0.4);
+    }
+
+    .producer-actions {
+      display: flex; gap: 0.45rem; margin-top: 0.5rem;
+    }
+
+    .btn-small {
+      padding: 0.45rem 0.85rem;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 0.75rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-small:hover {
+      border-color: rgba(166,124,26,0.4);
+      color: var(--gold);
+      background: var(--gold-soft);
+    }
+
+    .time-section {
+      margin-top: 1rem;
+      padding-top: 0.9rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .time-row {
+      display: flex; align-items: center; gap: 0.65rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .time-row label {
+      font-size: 0.75rem; color: var(--muted); min-width: 95px;
+    }
+
+    .time-row input[type="range"] {
+      flex: 1; accent-color: var(--gold); height: 3px;
+    }
+
+    .time-value {
+      font-family: 'Playfair Display', serif;
+      font-size: 0.95rem;
+      color: var(--gold); min-width: 40px; text-align: right;
+    }
+
+    .hint {
+      font-size: 0.68rem; color: var(--muted);
+      margin-top: 0.35rem; line-height: 1.4; opacity: 0.9;
+    }
+
+    .controls {
+      display: flex; gap: 0.5rem; margin-top: 1.1rem;
+    }
+
+    .btn {
+      flex: 1; padding: 0.75rem 1rem; border: none; border-radius: 9px;
+      font-family: 'DM Sans', sans-serif; font-size: 0.84rem;
+      font-weight: 550; letter-spacing: 0.02em; cursor: pointer;
+      transition: all 0.25s ease;
+      display: flex; align-items: center; justify-content: center; gap: 0.35rem;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--wood-dark) 0%, var(--wood) 45%, var(--wood-light) 100%);
+      color: #f5f0e8;
+      box-shadow: 0 3px 12px rgba(139,105,20,0.28);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 5px 18px rgba(139,105,20,0.35);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.4; cursor: not-allowed; transform: none;
+    }
+
+    .btn-danger {
+      background: transparent; color: var(--danger);
+      border: 1px solid rgba(184,92,92,0.35);
+    }
+
+    .btn-danger:hover {
+      background: rgba(184,92,92,0.08);
+      border-color: rgba(184,92,92,0.5);
+    }
+
+    .display-card {
+      text-align: center;
+      padding: 2.2rem 1.15rem;
+      min-height: 220px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      animation: fadeUp 0.35s ease both;
+    }
+
+    .display-card.active { display: flex; }
+
+    .display-card::before {
+      content: '';
+      position: absolute; width: 260px; height: 260px;
+      background: radial-gradient(circle, rgba(166,124,26,0.08), transparent 65%);
+      top: 50%; left: 50%; transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    .current-label {
+      font-size: 0.66rem; text-transform: uppercase;
+      letter-spacing: 0.16em; color: var(--muted);
+      margin-bottom: 0.4rem;
+    }
+
+    .current-note {
+      font-family: 'Playfair Display', serif;
+      font-size: 4.5rem; font-weight: 600; line-height: 1;
+      color: var(--text);
+      transition: transform 0.35s cubic-bezier(0.34, 1.4, 0.64, 1), opacity 0.22s ease;
+      opacity: 1;
+    }
+
+    .current-note.fade-out {
+      opacity: 0;
+      transform: scale(0.92);
+    }
+
+    .current-note.pulse {
+      transform: scale(1.05);
+    }
+
+    .timer-bar {
+      width: 100%; max-width: 170px; height: 3px;
+      background: rgba(166,124,26,0.12);
+      border-radius: 2px; margin-top: 1.35rem; overflow: hidden;
+    }
+
+    .timer-fill {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, var(--wood), var(--wood-light));
+      border-radius: 2px;
+      transition: width 0.08s linear;
+    }
+
+    .status {
+      margin-top: 0.75rem; font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .status.running { color: var(--gold); }
+
+    footer {
+      text-align: center; margin-top: 1.4rem;
+      font-size: 0.62rem; color: rgba(138,126,106,0.5);
+      letter-spacing: 0.1em;
+    }
+
+    .delete-banner {
+      display: none;
+      text-align: center;
+      font-size: 0.72rem;
+      color: var(--danger);
+      background: var(--danger-soft);
+      border: 1px solid rgba(184,92,92,0.25);
+      border-radius: 8px;
+      padding: 0.4rem 0.7rem;
+      margin-bottom: 0.75rem;
+      animation: fadeIn 0.25s ease;
+    }
+
+    body.delete-mode .delete-banner { display: block; }
+
+    /* ── Metronome (simple vertical) ── */
+    .metro-panel {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      padding: 1.5rem 0 0.5rem;
+      animation: fadeIn 0.35s ease;
+    }
+
+    .metro-panel.visible { display: flex; }
+
+    .metro-track {
+      position: relative;
+      width: 4px;
+      height: 180px;
+      background: linear-gradient(180deg, var(--border-strong), var(--border));
+      border-radius: 2px;
+      margin-bottom: 1.5rem;
+    }
+
+    .metro-track::before,
+    .metro-track::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 14px;
+      height: 3px;
+      background: var(--wood);
+      border-radius: 2px;
+    }
+
+    .metro-track::before { top: 0; }
+    .metro-track::after { bottom: 0; }
+
+    .metro-ball {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      transform: translate(-50%, -50%);
+      width: 22px;
+      height: 22px;
+      background: radial-gradient(circle at 35% 30%, #e8d48a, var(--gold), var(--wood-dark));
+      border-radius: 50%;
+      box-shadow: 0 2px 8px rgba(139,105,20,0.35);
+      z-index: 2;
+      will-change: top;
+    }
+
+    .metro-controls {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      width: 100%;
+      max-width: 280px;
+    }
+
+    .metro-bpm-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      width: 100%;
+    }
+
+    .metro-bpm-row button {
+      min-width: 40px; height: 36px;
+      padding: 0 0.5rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--muted);
+      font-size: 0.85rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .metro-bpm-row button:hover {
+      border-color: rgba(201,168,76,0.4);
+      color: var(--gold);
+      background: var(--gold-soft);
+    }
+
+    .metro-bpm-display {
+      text-align: center;
+      min-width: 90px;
+      margin: 0 0.35rem;
+    }
+
+    .metro-bpm-num {
+      width: 80px;
+      font-family: 'Playfair Display', serif;
+      font-size: 2rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.2;
+      text-align: center;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.25rem 0.4rem;
+      -webkit-user-select: text;
+      user-select: text;
+    }
+
+    .metro-bpm-num:focus {
+      border-color: rgba(201,168,76,0.45);
+    }
+
+    .metro-bpm-label {
+      font-size: 0.65rem;
+      color: var(--muted);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-top: 0.25rem;
+    }
+
+    .metro-slider {
+      width: 100%;
+      accent-color: var(--gold);
+      height: 4px;
+    }
+
+    .metro-play-btn {
+      width: 100%;
+      padding: 0.8rem;
+      border-radius: 10px;
+      border: 1px solid rgba(166,124,26,0.35);
+      background: var(--gold-soft);
+      color: var(--gold);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 550;
+      cursor: pointer;
+      transition: all 0.25s;
+      letter-spacing: 0.03em;
+    }
+
+    .metro-play-btn:hover {
+      background: rgba(166,124,26,0.2);
+      box-shadow: 0 0 12px var(--gold-glow);
+    }
+
+    .metro-play-btn.playing {
+      background: linear-gradient(135deg, var(--wood-dark), var(--wood));
+      color: #f5f0e8;
+      border-color: var(--wood);
+    }
+
+    .practice-ui.hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="bg-layer"></div>
+  <div class="bg-particles" id="particles"></div>
+
+  <div class="container">
+    <header>
+      <div class="logo">Nota<span>Flux</span></div>
+      <p class="tagline">Fluxo de notas & acordes</p>
+    </header>
+
+    <div class="card" id="setupCard">
+      <div class="card-title">Seleção</div>
+
+      <div class="mode-bar">
+        <div class="mode-toggle" id="modeToggle">
+          <div class="mode-indicator" id="modeIndicator"></div>
+          <button class="mode-btn active" data-mode="notes" data-idx="0">Notas</button>
+          <button class="mode-btn" data-mode="chords" data-idx="1">Acordes</button>
+          <button class="mode-btn" data-mode="producer" data-idx="2">Produtor</button>
+          <button class="mode-btn" data-mode="metro" data-idx="3">Metrônomo</button>
+        </div>
+      </div>
+
+      <div class="delete-banner" id="deleteBanner">Modo apagar ativo — clique nas notas ou chips para remover</div>
+
+      <div class="practice-ui" id="practiceUI">
+        <div class="notes-grid" id="notesGrid"></div>
+
+        <div class="chord-options" id="chordOptions">
+          <div class="quality-label">Qualidade (aplica ao clicar na nota)</div>
+          <div class="quality-grid" id="qualityGrid">
+            <button class="quality-btn selected" data-q="" data-suffix="">Maior</button>
+            <button class="quality-btn" data-q="m" data-suffix="m">Menor</button>
+            <button class="quality-btn" data-q="7" data-suffix="7">7</button>
+            <button class="quality-btn" data-q="m7" data-suffix="m7">m7</button>
+            <button class="quality-btn" data-q="maj7" data-suffix="maj7">maj7</button>
+            <button class="quality-btn" data-q="°" data-suffix="°">dim</button>
+            <button class="quality-btn" data-q="aug" data-suffix="aug">aug</button>
+            <button class="quality-btn" data-q="sus4" data-suffix="sus4">sus4</button>
+          </div>
+        </div>
+
+        <div class="selected-area" id="chipsArea">
+          <div class="selected-chips" id="selectedChips">
+            <span class="empty-msg">Nenhuma seleção ainda</span>
+          </div>
+          <div class="error-msg" id="errorMsg">Selecione pelo menos 2 itens.</div>
+        </div>
+
+        <div class="producer-field" id="producerField">
+          <label>Sequência da melodia (edite livremente · separadas por espaço)</label>
+          <textarea id="producerText" placeholder="Ex: C Dm G Am F C° ..." spellcheck="false"></textarea>
+          <div class="producer-actions">
+            <button class="btn-small" id="downloadBtn">Baixar .txt</button>
+            <button class="btn-small" id="applyTextBtn">Aplicar texto</button>
+          </div>
+          <div class="error-msg" id="errorMsgProd">Digite pelo menos 2 notas/acordes.</div>
+        </div>
+
+        <div class="toolbar">
+          <button class="tool-btn" id="undoBtn" title="Desfazer" disabled>
+            <svg viewBox="0 0 24 24"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6.7 2.9L3 13"/></svg>
+          </button>
+          <button class="tool-btn" id="redoBtn" title="Refazer" disabled>
+            <svg viewBox="0 0 24 24"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6.7 2.9L21 13"/></svg>
+          </button>
+          <button class="tool-btn" id="trashBtn" title="Modo apagar">
+            <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+          </button>
+          <button class="tool-btn clear-btn" id="clearBtn" title="Limpar tudo">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+          </button>
+        </div>
+
+        <div class="time-section">
+          <div class="time-row">
+            <label>Intervalo mínimo</label>
+            <input type="range" id="minTime" min="2" max="8" step="0.5" value="2" />
+            <span class="time-value" id="minTimeVal">2.0s</span>
+          </div>
+          <div class="time-row">
+            <label>Intervalo máximo</label>
+            <input type="range" id="maxTime" min="3" max="12" step="0.5" value="5" />
+            <span class="time-value" id="maxTimeVal">5.0s</span>
+          </div>
+          <p class="hint">Tempo entre trocas é aleatório entre mínimo e máximo.</p>
+        </div>
+
+        <div class="controls">
+          <button class="btn btn-primary" id="startBtn" disabled>Iniciar Fluxo</button>
+        </div>
+      </div>
+
+      <!-- Metronome -->
+      <div class="metro-panel" id="metroPanel">
+        <div class="metro-track">
+          <div class="metro-ball" id="metroBall"></div>
+        </div>
+        <div class="metro-controls">
+          <div class="metro-bpm-row">
+            <button id="bpmDown5" title="-5">−5</button>
+            <button id="bpmDown1" title="-1">−1</button>
+            <div class="metro-bpm-display">
+              <input class="metro-bpm-num" id="bpmVal" type="text" inputmode="numeric" value="100" maxlength="3" />
+              <div class="metro-bpm-label">BPM</div>
+            </div>
+            <button id="bpmUp1" title="+1">+1</button>
+            <button id="bpmUp5" title="+5">+5</button>
+          </div>
+          <input type="range" class="metro-slider" id="bpmSlider" min="20" max="300" value="100" />
+          <button class="metro-play-btn" id="metroPlayBtn">Iniciar</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card display-card" id="displayCard">
+      <div class="current-label" id="currentLabel">Nota atual</div>
+      <div class="current-note" id="currentNote">—</div>
+      <div class="timer-bar">
+        <div class="timer-fill" id="timerFill"></div>
+      </div>
+      <div class="status" id="statusText">Aguardando...</div>
+      <div class="controls" style="width:100%; max-width:250px; margin-top:1.25rem">
+        <button class="btn btn-danger" id="stopBtn">Parar</button>
+      </div>
+    </div>
+
+    <footer>NotaFlux · Prática musical</footer>
+  </div>
+
+  <script>
+    const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+    let selectedItems = [];
+    let mode = 'notes';
+    let currentQuality = '';
+    let currentSuffix = '';
+    let isRunning = false;
+    let deleteMode = false;
+    let timeoutId = null;
+    let animFrame = null;
+    let startTime = 0;
+    let duration = 0;
+    let lastShownId = null;
+    let producerCounter = 0;
+
+    let undoStack = [];
+    let redoStack = [];
+    const MAX_HISTORY = 40;
+
+    let metroPlaying = false;
+    let metroBpm = 100;
+    let audioCtx = null;
+    let swingRaf = null;
+
+    const notesGrid = document.getElementById('notesGrid');
+    const qualityGrid = document.getElementById('qualityGrid');
+    const chordOptions = document.getElementById('chordOptions');
+    const selectedChips = document.getElementById('selectedChips');
+    const chipsArea = document.getElementById('chipsArea');
+    const producerField = document.getElementById('producerField');
+    const producerText = document.getElementById('producerText');
+    const errorMsg = document.getElementById('errorMsg');
+    const errorMsgProd = document.getElementById('errorMsgProd');
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const setupCard = document.getElementById('setupCard');
+    const displayCard = document.getElementById('displayCard');
+    const currentNoteEl = document.getElementById('currentNote');
+    const currentLabel = document.getElementById('currentLabel');
+    const statusText = document.getElementById('statusText');
+    const timerFill = document.getElementById('timerFill');
+    const minTimeInput = document.getElementById('minTime');
+    const maxTimeInput = document.getElementById('maxTime');
+    const minTimeVal = document.getElementById('minTimeVal');
+    const maxTimeVal = document.getElementById('maxTimeVal');
+    const undoBtn = document.getElementById('undoBtn');
+    const redoBtn = document.getElementById('redoBtn');
+    const trashBtn = document.getElementById('trashBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const practiceUI = document.getElementById('practiceUI');
+    const modeIndicator = document.getElementById('modeIndicator');
+    const metroPanel = document.getElementById('metroPanel');
+    const metroBall = document.getElementById('metroBall');
+    const metroPlayBtn = document.getElementById('metroPlayBtn');
+    const bpmVal = document.getElementById('bpmVal');
+    const bpmSlider = document.getElementById('bpmSlider');
+
+    NOTES.forEach(n => {
+      const btn = document.createElement('button');
+      btn.className = 'note-btn';
+      btn.textContent = n;
+      btn.dataset.note = n;
+      btn.addEventListener('click', () => onNoteClick(n));
+      notesGrid.appendChild(btn);
+    });
+
+    qualityGrid.querySelectorAll('.quality-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        qualityGrid.querySelectorAll('.quality-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        currentQuality = btn.dataset.q;
+        currentSuffix = btn.dataset.suffix;
+        updateNoteHighlights();
+      });
+    });
+
+    function updateIndicator(btn) {
+      // offsetLeft/Width are relative to the padded grid — perfect for the sliding pill
+      modeIndicator.style.left = btn.offsetLeft + 'px';
+      modeIndicator.style.width = btn.offsetWidth + 'px';
+    }
+
+    function setMode(m, btn) {
+      mode = m;
+      document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
+      if (btn) updateIndicator(btn);
+
+      const isMetro = m === 'metro';
+      practiceUI.classList.toggle('hidden', isMetro);
+      metroPanel.classList.toggle('visible', isMetro);
+
+      if (!isMetro) {
+        const showQuality = (m === 'chords' || m === 'producer');
+        chordOptions.classList.toggle('visible', showQuality);
+        chipsArea.style.display = m === 'producer' ? 'none' : 'block';
+        producerField.classList.toggle('visible', m === 'producer');
+        if (m === 'producer') syncProducerText();
+        updateNoteHighlights();
+        validate();
+      }
+
+      if (!isMetro && metroPlaying) stopMetro();
+    }
+
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.addEventListener('click', () => setMode(btn.dataset.mode, btn));
+    });
+
+    // Posiciona o indicador no modo ativo ao carregar / redimensionar
+    function syncIndicator() {
+      const active = document.querySelector('.mode-btn.active');
+      if (active) updateIndicator(active);
+    }
+    requestAnimationFrame(syncIndicator);
+    window.addEventListener('resize', syncIndicator);
+
+    // ── Metronome: ball goes top ↔ bottom, click at ends ──
+    function getAudioCtx() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      return audioCtx;
+    }
+
+    // Click agendado no relógio de áudio (preciso, não depende de frames)
+    let pendingClicks = [];
+
+    function scheduleClick(when) {
+      const ctx = getAudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 1000;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.28, when);
+      gain.gain.exponentialRampToValueAtTime(0.001, when + 0.05);
+      osc.start(when);
+      osc.stop(when + 0.06);
+      const item = { osc, when };
+      pendingClicks.push(item);
+      osc.onended = () => { pendingClicks = pendingClicks.filter(p => p !== item); };
+    }
+
+    function cancelPendingClicks() {
+      const ctx = getAudioCtx();
+      pendingClicks.forEach(p => {
+        if (p.when > ctx.currentTime) { try { p.osc.stop(); } catch (e) {} }
+      });
+      pendingClicks = pendingClicks.filter(p => p.when <= ctx.currentTime);
+    }
+
+    // Linha do tempo em batidas: batida par = topo, ímpar = base
+    let anchorTime = 0;    // tempo de áudio (s) da âncora
+    let anchorBeat = 0;    // posição em batidas na âncora
+    let nextBeat = 0;      // próxima batida inteira a agendar
+    let schedTimer = null;
+    const LOOKAHEAD = 0.15; // s
+
+    function beatSec() { return 60 / metroBpm; }
+    function beatPosAt(t) { return anchorBeat + (t - anchorTime) / beatSec(); }
+    function timeOfBeat(n) { return anchorTime + (n - anchorBeat) * beatSec(); }
+
+    function scheduler() {
+      if (!metroPlaying) return;
+      const ctx = getAudioCtx();
+      while (timeOfBeat(nextBeat) < ctx.currentTime + LOOKAHEAD) {
+        scheduleClick(Math.max(timeOfBeat(nextBeat), ctx.currentTime));
+        nextBeat++;
+      }
+    }
+
+    function animateBall() {
+      if (!metroPlaying) return;
+      const ctx = getAudioCtx();
+      // Tempo de áudio que está SAINDO agora pelo alto-falante (já considera a latência real)
+      let heard = ctx.currentTime - (ctx.outputLatency || ctx.baseLatency || 0);
+      if (ctx.getOutputTimestamp) {
+        const ts = ctx.getOutputTimestamp();
+        if (ts && ts.performanceTime > 0 && ts.contextTime > 0) {
+          heard = ts.contextTime + (performance.now() - ts.performanceTime) / 1000;
+        }
+      }
+      const pos = Math.max(0, beatPosAt(heard));
+      const phase = pos % 2;              // 0..2
+      const y = phase < 1 ? phase : 2 - phase; // 0→1→0
+      metroBall.style.top = (y * 100) + '%';
+      swingRaf = requestAnimationFrame(animateBall);
+    }
+
+    function startMetro() {
+      if (metroPlaying) return;
+      const ctx = getAudioCtx();
+      if (ctx.state === 'suspended') ctx.resume();
+      metroPlaying = true;
+      metroPlayBtn.textContent = 'Parar';
+      metroPlayBtn.classList.add('playing');
+      anchorTime = ctx.currentTime + 0.08;
+      anchorBeat = 0;
+      nextBeat = 0;
+      scheduler();
+      schedTimer = setInterval(scheduler, 25);
+      swingRaf = requestAnimationFrame(animateBall);
+    }
+
+    function stopMetro() {
+      metroPlaying = false;
+      metroPlayBtn.textContent = 'Iniciar';
+      metroPlayBtn.classList.remove('playing');
+      cancelAnimationFrame(swingRaf);
+      clearInterval(schedTimer);
+      cancelPendingClicks();
+      metroBall.style.top = '0%';
+    }
+
+    function setBpm(v) {
+      const newBpm = Math.max(20, Math.min(300, Math.round(Number(v) || 100)));
+      if (metroPlaying && newBpm !== metroBpm) {
+        // re-ancora na posição atual para não dar salto na bolinha nem nos cliques
+        const ctx = getAudioCtx();
+        const now = ctx.currentTime;
+        const pos = beatPosAt(now);
+        cancelPendingClicks();
+        anchorBeat = pos;
+        anchorTime = now;
+        metroBpm = newBpm;
+        nextBeat = Math.ceil(pos - 1e-9);
+        scheduler();
+      } else {
+        metroBpm = newBpm;
+      }
+      bpmVal.value = metroBpm;
+      bpmSlider.value = metroBpm;
+    }
+
+    metroPlayBtn.addEventListener('click', () => {
+      if (metroPlaying) stopMetro();
+      else startMetro();
+    });
+
+    document.getElementById('bpmDown5').addEventListener('click', () => setBpm(metroBpm - 5));
+    document.getElementById('bpmDown1').addEventListener('click', () => setBpm(metroBpm - 1));
+    document.getElementById('bpmUp1').addEventListener('click', () => setBpm(metroBpm + 1));
+    document.getElementById('bpmUp5').addEventListener('click', () => setBpm(metroBpm + 5));
+    bpmSlider.addEventListener('input', () => setBpm(parseInt(bpmSlider.value)));
+    bpmVal.addEventListener('change', () => setBpm(bpmVal.value));
+    bpmVal.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); setBpm(bpmVal.value); bpmVal.blur(); }
+    });
+
+    // Toolbar
+    trashBtn.addEventListener('click', () => {
+      deleteMode = !deleteMode;
+      document.body.classList.toggle('delete-mode', deleteMode);
+      trashBtn.classList.toggle('active-danger', deleteMode);
+    });
+
+    clearBtn.addEventListener('click', () => {
+      if (selectedItems.length === 0 && !producerText.value.trim()) return;
+      pushHistory();
+      selectedItems = [];
+      producerCounter = 0;
+      producerText.value = '';
+      renderSelected();
+      updateNoteHighlights();
+      validate();
+      if (deleteMode) {
+        deleteMode = false;
+        document.body.classList.remove('delete-mode');
+        trashBtn.classList.remove('active-danger');
+      }
+    });
+
+    undoBtn.addEventListener('click', undo);
+    redoBtn.addEventListener('click', redo);
+    document.getElementById('downloadBtn').addEventListener('click', downloadTxt);
+    document.getElementById('applyTextBtn').addEventListener('click', applyProducerText);
+
+    function makeLabel(root, suffix) {
+      if (mode === 'notes') return root;
+      return root + suffix;
+    }
+
+    function pushHistory() {
+      undoStack.push(JSON.stringify(selectedItems));
+      if (undoStack.length > MAX_HISTORY) undoStack.shift();
+      redoStack = [];
+      updateHistoryButtons();
+    }
+
+    function undo() {
+      if (undoStack.length === 0) return;
+      redoStack.push(JSON.stringify(selectedItems));
+      selectedItems = JSON.parse(undoStack.pop());
+      if (mode === 'producer') syncProducerText();
+      renderSelected();
+      updateNoteHighlights();
+      validate();
+      updateHistoryButtons();
+    }
+
+    function redo() {
+      if (redoStack.length === 0) return;
+      undoStack.push(JSON.stringify(selectedItems));
+      selectedItems = JSON.parse(redoStack.pop());
+      if (mode === 'producer') syncProducerText();
+      renderSelected();
+      updateNoteHighlights();
+      validate();
+      updateHistoryButtons();
+    }
+
+    function updateHistoryButtons() {
+      undoBtn.disabled = undoStack.length === 0;
+      redoBtn.disabled = redoStack.length === 0;
+    }
+
+    function onNoteClick(root) {
+      if (deleteMode) {
+        const before = selectedItems.length;
+        if (mode === 'notes') {
+          selectedItems = selectedItems.filter(item => item.root !== root);
+        } else if (mode === 'chords') {
+          const exactId = root + '|' + currentQuality;
+          selectedItems = selectedItems.filter(item => item.id !== exactId);
+        } else {
+          const label = makeLabel(root, currentSuffix);
+          for (let i = selectedItems.length - 1; i >= 0; i--) {
+            if (selectedItems[i].label === label) {
+              selectedItems.splice(i, 1);
+              break;
+            }
+          }
+        }
+        if (selectedItems.length !== before) {
+          pushHistory();
+          if (mode === 'producer') syncProducerText();
+          renderSelected();
+          updateNoteHighlights();
+          validate();
+        }
+        return;
+      }
+
+      pushHistory();
+
+      if (mode === 'producer') {
+        producerCounter++;
+        selectedItems.push({
+          id: 'p' + producerCounter,
+          root,
+          quality: currentQuality,
+          label: makeLabel(root, currentSuffix)
+        });
+        syncProducerText();
+      } else {
+        const q = mode === 'notes' ? '' : currentQuality;
+        const s = mode === 'notes' ? '' : currentSuffix;
+        const id = root + '|' + q;
+        const idx = selectedItems.findIndex(item => item.id === id);
+        if (idx >= 0) {
+          selectedItems.splice(idx, 1);
+        } else {
+          selectedItems.push({ id, root, quality: q, label: makeLabel(root, s) });
+        }
+      }
+
+      renderSelected();
+      updateNoteHighlights();
+      validate();
+    }
+
+    function removeById(id) {
+      if (!deleteMode) return;
+      const before = selectedItems.length;
+      selectedItems = selectedItems.filter(item => item.id !== id);
+      if (selectedItems.length !== before) {
+        pushHistory();
+        if (mode === 'producer') syncProducerText();
+        renderSelected();
+        updateNoteHighlights();
+        validate();
+      }
+    }
+
+    function renderSelected() {
+      if (mode === 'producer' || mode === 'metro') return;
+      if (selectedItems.length === 0) {
+        selectedChips.innerHTML = '<span class="empty-msg">Nenhuma seleção ainda</span>';
+        return;
+      }
+      selectedChips.innerHTML = selectedItems.map(item => `
+        <div class="chip" data-id="${item.id}">${item.label}</div>
+      `).join('');
+      selectedChips.querySelectorAll('.chip').forEach(chip => {
+        chip.addEventListener('click', () => removeById(chip.dataset.id));
+      });
+    }
+
+    function syncProducerText() {
+      producerText.value = selectedItems.map(i => i.label).join(' ');
+    }
+
+    function applyProducerText() {
+      const raw = producerText.value.trim();
+      if (!raw) {
+        pushHistory();
+        selectedItems = [];
+        updateNoteHighlights();
+        validate();
+        return;
+      }
+      const tokens = raw.split(/\s+/).filter(Boolean);
+      const newItems = [];
+      let counter = 0;
+      tokens.forEach(tok => {
+        const m = tok.match(/^([A-G]#?)(.*)$/i);
+        if (!m) return;
+        const root = m[1].charAt(0).toUpperCase() + (m[1][1] || '');
+        let suffix = m[2] || '';
+        if (suffix.toLowerCase() === 'dim') suffix = '°';
+        counter++;
+        newItems.push({ id: 'p' + counter, root, quality: suffix, label: root + suffix });
+      });
+      pushHistory();
+      selectedItems = newItems;
+      producerCounter = counter;
+      updateNoteHighlights();
+      validate();
+    }
+
+    function downloadTxt() {
+      const text = producerText.value.trim() || selectedItems.map(i => i.label).join(' ');
+      if (!text) return;
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'notaflex-melodia.txt';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function updateNoteHighlights() {
+      notesGrid.querySelectorAll('.note-btn').forEach(btn => {
+        const root = btn.dataset.note;
+        btn.classList.remove('soft', 'active');
+        const hasAny = selectedItems.some(item => item.root === root);
+        if (hasAny) btn.classList.add('soft');
+        if (mode === 'chords') {
+          const exactId = root + '|' + currentQuality;
+          if (selectedItems.some(item => item.id === exactId)) btn.classList.add('active');
+        } else if (mode === 'notes') {
+          if (selectedItems.some(item => item.root === root)) btn.classList.add('active');
+        }
+      });
+    }
+
+    function validate() {
+      const ok = selectedItems.length >= 2;
+      startBtn.disabled = !ok;
+      if (mode === 'producer') {
+        errorMsgProd.classList.toggle('show', !ok && (selectedItems.length > 0 || producerText.value.trim()));
+        errorMsg.classList.remove('show');
+      } else {
+        errorMsg.classList.toggle('show', !ok && selectedItems.length > 0);
+        errorMsgProd.classList.remove('show');
+      }
+    }
+
+    function updateTimeLabels() {
+      let min = parseFloat(minTimeInput.value);
+      let max = parseFloat(maxTimeInput.value);
+      if (min > max) { max = min; maxTimeInput.value = max; }
+      minTimeVal.textContent = min.toFixed(1) + 's';
+      maxTimeVal.textContent = max.toFixed(1) + 's';
+    }
+    minTimeInput.addEventListener('input', updateTimeLabels);
+    maxTimeInput.addEventListener('input', updateTimeLabels);
+
+    function randomInterval() {
+      const min = parseFloat(minTimeInput.value);
+      const max = parseFloat(maxTimeInput.value);
+      return (Math.random() * (max - min) + min) * 1000;
+    }
+
+    function pickNext() {
+      if (selectedItems.length === 1) return selectedItems[0];
+      let next;
+      do {
+        next = selectedItems[Math.floor(Math.random() * selectedItems.length)];
+      } while (next.id === lastShownId && selectedItems.length > 1);
+      lastShownId = next.id;
+      return next;
+    }
+
+    function showItem(item) {
+      currentNoteEl.classList.add('fade-out');
+      setTimeout(() => {
+        currentNoteEl.textContent = item.label;
+        currentNoteEl.classList.remove('fade-out');
+        currentNoteEl.classList.add('pulse');
+        setTimeout(() => currentNoteEl.classList.remove('pulse'), 380);
+      }, 160);
+    }
+
+    function animateTimer() {
+      if (!isRunning) return;
+      const elapsed = performance.now() - startTime;
+      const pct = Math.min(100, (elapsed / duration) * 100);
+      timerFill.style.width = pct + '%';
+      if (pct < 100) animFrame = requestAnimationFrame(animateTimer);
+    }
+
+    function scheduleNext() {
+      if (!isRunning) return;
+      const item = pickNext();
+      showItem(item);
+      duration = randomInterval();
+      startTime = performance.now();
+      timerFill.style.width = '0%';
+      statusText.textContent = `Próxima troca em ~${(duration / 1000).toFixed(1)}s`;
+      statusText.classList.add('running');
+      cancelAnimationFrame(animFrame);
+      animateTimer();
+      timeoutId = setTimeout(scheduleNext, duration);
+    }
+
+    startBtn.addEventListener('click', () => {
+      if (mode === 'producer') applyProducerText();
+      if (selectedItems.length < 2) return;
+      isRunning = true;
+      deleteMode = false;
+      document.body.classList.remove('delete-mode');
+      trashBtn.classList.remove('active-danger');
+      setupCard.style.display = 'none';
+      displayCard.classList.add('active');
+      currentLabel.textContent = mode === 'chords' ? 'Acorde atual' : (mode === 'producer' ? 'Melodia' : 'Nota atual');
+      lastShownId = null;
+      scheduleNext();
+    });
+
+    stopBtn.addEventListener('click', () => {
+      isRunning = false;
+      clearTimeout(timeoutId);
+      cancelAnimationFrame(animFrame);
+      displayCard.classList.remove('active');
+      setupCard.style.display = 'block';
+      statusText.classList.remove('running');
+      timerFill.style.width = '0%';
+    });
+
+    // Particles — sobem do fundo
+    (function createParticles() {
+      const container = document.getElementById('particles');
+      if (!container) return;
+      for (let i = 0; i < 30; i++) {
+        const el = document.createElement('div');
+        el.className = 'particle';
+        el.style.left = Math.random() * 100 + '%';
+        el.style.width = el.style.height = (2 + Math.random() * 3.5) + 'px';
+        el.style.animationDuration = (12 + Math.random() * 18) + 's';
+        el.style.animationDelay = (-Math.random() * 20) + 's'; // já em movimento
+        container.appendChild(el);
+      }
+    })();
+  </script>
+</body>
+</html>
