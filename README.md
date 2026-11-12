@@ -15,14 +15,12 @@ NotaFlux é uma ferramenta web simples e sofisticada para treinar reconhecimento
 - Tempo de troca aleatório (mínimo 2 segundos, configurável)
 - Desfazer / Refazer
 - Modo apagar (lixeira) e limpar tudo
-- Visual luxuoso em tons dourados
-- 100% local — funciona offline após abrir o arquivo
 
 ## Como usar
 
 1. Escolha o modo (Notas, Acordes ou Produtor)
 2. Selecione as notas/acordes desejados
-3. Ajuste o intervalo mínimo e máximo de tempo
+3. Ajuste o intervalo mínimo e máximo ou fixo de tempo
 4. Clique em **Iniciar Fluxo**
 5. Pratique até clicar em **Parar**
 
@@ -39,13 +37,11 @@ NotaFlux é uma ferramenta web simples e sofisticada para treinar reconhecimento
 
 - Clique nas notas para ir montando a sequência
 - Edite o texto livremente no campo
-- Use **Aplicar texto** para sincronizar
 - **Baixar .txt** salva a melodia para uso posterior
 
 ## Requisitos
 
 - Qualquer navegador moderno (Chrome, Firefox, Safari, Edge)
-- Não precisa de instalação nem internet após abrir o arquivo
 
 ## Licença
 
