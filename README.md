@@ -9,8 +9,9 @@ NotaFlux é uma ferramenta web simples e sofisticada para treinar reconhecimento
 ## Recursos
 
 - **Modo Notas** — selecione notas individuais (mínimo 2)
-- **Modo Acordes** — escolha a qualidade (Maior, Menor, 7, m7, maj7, dim °, aug, sus4) e combine com as notas
+- **Modo Acordes** — escolha a qualidade (Maior, Menor, 7, m7, maj7, dim, aug, sus4) e combine com as notas
 - **Modo Produtor** — monte uma sequência completa (ilimitada, com repetições), edite manualmente e baixe como `.txt`
+- **Modo Metrônomo** — metrônomo funcional que vai de 20 a 300 BPMs
 - Tempo de troca aleatório (mínimo 2 segundos, configurável)
 - Desfazer / Refazer
 - Modo apagar (lixeira) e limpar tudo
