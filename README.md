@@ -4,7 +4,7 @@ Fluxo aleatório e elegante de notas e acordes para prática musical.
 
 ## O que é
 
-NotaFlux é uma ferramenta web simples e sofisticada para treinar reconhecimento de notas e acordes. Você seleciona as notas/acordes desejados, define o intervalo de tempo e o app alterna entre eles de forma aleatória — ideal para ear training, aquecimento ou estudo de progressões.
+NotaFlux é uma ferramenta web simples e sofisticada para treinar reconhecimento de notas e acordes. Você seleciona as notas/acordes desejados, define o intervalo de tempo e o app alterna entre eles de forma aleatória ou fixa — ideal para ear training, aquecimento ou estudo de progressões.
 
 ## Recursos
 
